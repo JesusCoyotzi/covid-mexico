@@ -12,7 +12,7 @@ def graph_df(df,cumulative=False, title="Cases"):
   fig, ax = plt.subplots(figsize=(15,7))
 
   if cumulative:      
-     df = coalesced_df.cumsum()
+     df = df.cumsum()
      df.plot(grid=True,ax=ax)
   else:
      ax.bar(df.index,df['Sospechosos'],label='Sospechosos',bottom=df['Positivos'])
@@ -35,6 +35,7 @@ if __name__=='__main__':
   parser.add_argument('--catalogo', action='store',default='csv_data/Catalogos_0412.xlsx', help='Catalogo de datos para Covid-19')
   parser.add_argument('--desplazamiento',action='store', default=0, help='Dias a omitir a partir de hoy', type=int)
   parser.add_argument('--acumulados',action='store_true', help="Grafica casos acumulados en vez de incidencias")
+  parser.add_argument('--ingreso',action='store_true', help="Usa fecha de ingreso en lugar de fecha de sintomas")
   parsed = parser.parse_args()
  
   with pd.ExcelFile(parsed.catalogo) as xls:
@@ -46,7 +47,13 @@ if __name__=='__main__':
   #print(estado_df.head())
       
   covid_df = pd.read_csv(parsed.archivo,encoding='latin-1')
-  covid_df['FECHA_SINTOMAS'] = pd.to_datetime(covid_df['FECHA_SINTOMAS'])
+  
+  if parsed.ingreso:
+    date_tag="FECHA_INGRESO"  
+  else:
+    date_tag='FECHA_SINTOMAS'
+
+  covid_df[date_tag] = pd.to_datetime(covid_df[date_tag])
 
   if parsed.estado:
     estado = parsed.estado.upper()
@@ -63,7 +70,7 @@ if __name__=='__main__':
 
   if parsed.desplazamiento:
     last_date = pd.Timestamp.now() - pd.Timedelta(days=parsed.desplazamiento)
-    covid_df = covid_df[covid_df['FECHA_SINTOMAS'] < last_date]
+    covid_df = covid_df[covid_df[date_tag] < last_date]
 
   print("Resumen para {}".format(entidad.capitalize()))
   print("Eventos registrados || {}".format(covid_df['ID_REGISTRO'].count()))
@@ -76,9 +83,9 @@ if __name__=='__main__':
   #active_df = covid_df[covid_df['RESULTADO'] != 3]
 
   #Did not used all of the categories but left code for referenced
-  timeseries_full = covid_df.groupby('FECHA_SINTOMAS') 
-  timeseries_positive  = positive_df.groupby('FECHA_SINTOMAS')
-  timeseries_pending  = pending_df.groupby('FECHA_SINTOMAS')
+  timeseries_full = covid_df.groupby(date_tag) 
+  timeseries_positive  = positive_df.groupby(date_tag)
+  timeseries_pending  = pending_df.groupby(date_tag)
   #timeseries_negative  = negative_df.groupby('FECHA_SINTOMAS')
 
   print("------------------------------")
@@ -113,6 +120,6 @@ if __name__=='__main__':
 
   #Plotting
   plt.style.use('ggplot')
-  graph_df(coalesced_df,cumulative=parsed.acumulados, title="Cases {}".format(entidad))
+  graph_df(coalesced_df,cumulative=parsed.acumulados, title="Casos {}".format(entidad))
   graph_df(coalesced_deaths,cumulative=parsed.acumulados, title="Defunciones {}".format(entidad))
   plt.show()
