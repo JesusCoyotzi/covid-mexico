@@ -1,3 +1,4 @@
 *.zip
-*.csv
+csv_data/*
+!csv_data/201005COVID19MEXICO.csv
 *lock*
