@@ -1,8 +1,4 @@
 *.zip
-<<<<<<< HEAD
 csv_data/*
-!csv_data/201005COVID19MEXICO.csv
-=======
-*.csv
->>>>>>> 248bfad353b7cbe0dffa4f8ef50f817cf9f9198f
+*.pyc
 *lock*
