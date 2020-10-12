@@ -32,7 +32,7 @@ if __name__=='__main__':
   parser = argparse.ArgumentParser(description="Datos oficiales Covid-19")
   parser.add_argument('--estado',action='store',default=None)
   parser.add_argument('archivo',action='store', help='csv con datos de la secretaria de salud')
-  parser.add_argument('--catalogo', action='store',default='csv_data/Catalogos_0412.xlsx', help='Catalogo de datos para Covid-19')
+  parser.add_argument('--catalogo', action='store',default='csv_data/dic_datos_covid19/Catalogos_071020.xlsx', help='Catalogo de datos para Covid-19')
   parser.add_argument('--desplazamiento',action='store', default=0, help='Dias a omitir a partir de hoy', type=int)
   parser.add_argument('--acumulados',action='store_true', help="Grafica casos acumulados en vez de incidencias")
   parser.add_argument('--ingreso',action='store_true', help="Usa fecha de ingreso en lugar de fecha de sintomas")
@@ -72,29 +72,24 @@ if __name__=='__main__':
     last_date = pd.Timestamp.now() - pd.Timedelta(days=parsed.desplazamiento)
     covid_df = covid_df[covid_df[date_tag] < last_date]
 
+
+  result_tag = 'CLASIFICACION_FINAL'
+  all_positives = covid_df[result_tag].isin([1,2,3])
   print("Resumen para {}".format(entidad.capitalize()))
   print("Eventos registrados || {}".format(covid_df['ID_REGISTRO'].count()))
-  positive_df = covid_df[covid_df['RESULTADO_LAB'] == 1]
+  positive_df = covid_df[all_positives]
   print("Casos positivos     || {}".format(positive_df['ID_REGISTRO'].count()))
-  negative_df = covid_df[covid_df['RESULTADO_LAB'] == 2]
+  negative_df = covid_df[covid_df[result_tag] == 7]
   print("Casos negativos     || {}".format(negative_df['ID_REGISTRO'].count()))
-  pending_df = covid_df[covid_df['RESULTADO_LAB'] == 3]
+  pending_df = covid_df[covid_df[result_tag] == 6]
   print("Casos sospechosos   || {}".format(pending_df['ID_REGISTRO'].count()))
   #active_df = covid_df[covid_df['RESULTADO'] != 3]
 
   print("Primer caso en:     || {}".format(min(positive_df[date_tag]) ))
   print("Ultimo caso en:     || {}".format(max(positive_df[date_tag]) ))
 
-  positive_df = covid_df[covid_df['RESULTADO'] == 1]
-  print("Casos positivos     || {}".format(positive_df['ID_REGISTRO'].count()))
-  negative_df = covid_df[covid_df['RESULTADO'] == 2]
-  print("Casos negativos     || {}".format(negative_df['ID_REGISTRO'].count()))
-  pending_df = covid_df[covid_df['RESULTADO'] == 3]
-  print("Casos sospechosos   || {}".format(pending_df['ID_REGISTRO'].count()))
-  #active_df = covid_df[covid_df['RESULTADO'] != 3]
-
-  #Did not used all of the categories but left code for referenced
-  timeseries_full = covid_df.groupby(date_tag) 
+  #Did not used all of the categories but left code for reference
+  #timeseries_full = covid_df.groupby(date_tag) 
   timeseries_positive  = positive_df.groupby(date_tag)
   timeseries_pending  = pending_df.groupby(date_tag)
   #timeseries_negative  = negative_df.groupby('FECHA_SINTOMAS')
@@ -105,15 +100,16 @@ if __name__=='__main__':
   if parsed.desplazamiento:
     death_df = death_df[death_df['FECHA_DEF'] < last_date]
 
+  all_positive_deaths = death_df[result_tag].isin([1,2,3])
   print("Defunciones registradas ||  {}".format(death_df['ID_REGISTRO'].count()) )
-  positive_death_df = death_df[death_df['RESULTADO_LAB'] == 1]
+  positive_death_df = death_df[all_positive_deaths]
   print("Defunciones positivas   ||  {}".format(positive_death_df['ID_REGISTRO'].count()) ) 
-  suspect_death_df = death_df[death_df['RESULTADO_LAB'] == 3]
+  suspect_death_df = death_df[death_df[result_tag] == 6]
   print("Defunciones sospechosas || {}".format(suspect_death_df['ID_REGISTRO'].count()) )
 
   print("Primer defuncion en:    || {}".format(min(death_df[date_tag]) ))
   print("Ultima defuncion en:    || {}".format(max(death_df[date_tag]) ))
-  death_series_full = death_df.groupby('FECHA_DEF')
+  #death_series_full = death_df.groupby('FECHA_DEF')
   death_series_positive = positive_death_df.groupby('FECHA_DEF')
   death_series_suspect = suspect_death_df.groupby('FECHA_DEF')
   
@@ -124,12 +120,8 @@ if __name__=='__main__':
   coalesced_df = pd.DataFrame(columns=["Positivos", "Sospechosos"])
   #coalesced_df['Total'] = timeseries_full['ID_REGISTRO'].count().cumsum()
   #coalesced_df['Negativos'] = timeseries_negative['ID_REGISTRO'].count().cumsum()
-  #Los sospechosos algo tienen
-  #coalesced_df['Sospechosos'] = timeseries_pending['ID_REGISTRO'].count()
+  coalesced_df['Sospechosos'] = timeseries_pending['ID_REGISTRO'].count()
   coalesced_df['Positivos'] = timeseries_positive['ID_REGISTRO'].count()
-  print(timeseries_positive['ID_REGISTRO'].count())
-  print(len(coalesced_df)) 
-  print(len(coalesced_deaths))
   #Fill days with no data or cases
   coalesced_deaths.fillna(0,inplace=True)
   coalesced_df.fillna(0,inplace=True)
