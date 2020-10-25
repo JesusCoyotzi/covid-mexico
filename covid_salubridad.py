@@ -7,7 +7,7 @@ import datetime
 import argparse
 import sys
 
-def graph_df(df,cumulative=False, title="Cases"):
+def graph_df(df,cumulative=False, title="Cases", bar_width=0.8):
   """Graph cases per dar, df has to have proper format"""
   fig, ax = plt.subplots(figsize=(15,7))
 
@@ -15,8 +15,8 @@ def graph_df(df,cumulative=False, title="Cases"):
      df = df.cumsum()
      df.plot(grid=True,ax=ax)
   else:
-     ax.bar(df.index,df['Sospechosos'],label='Sospechosos',bottom=df['Positivos'])
-     ax.bar(df.index,df['Positivos'],label='Positivos')
+     ax.bar(df.index,df['Sospechosos'],label='Sospechosos',bottom=df['Positivos'],width=bar_width)
+     ax.bar(df.index,df['Positivos'],label='Positivos',width=bar_width)
   
   date_form = DateFormatter('%d-%m-%Y')
   ax.set_title(title)
@@ -29,13 +29,14 @@ def graph_df(df,cumulative=False, title="Cases"):
   
 if __name__=='__main__':
 
-  parser = argparse.ArgumentParser(description="Datos oficiales Covid-19")
+  parser = argparse.ArgumentParser(description="Datos oficiales Covid-18")
   parser.add_argument('--estado',action='store',default=None)
   parser.add_argument('archivo',action='store', help='csv con datos de la secretaria de salud')
   parser.add_argument('--catalogo', action='store',default='csv_data/dic_datos_covid19/Catalogos_071020.xlsx', help='Catalogo de datos para Covid-19')
   parser.add_argument('--desplazamiento',action='store', default=0, help='Dias a omitir a partir de hoy', type=int)
   parser.add_argument('--acumulados',action='store_true', help="Grafica casos acumulados en vez de incidencias")
   parser.add_argument('--ingreso',action='store_true', help="Usa fecha de ingreso en lugar de fecha de sintomas")
+  parser.add_argument('--semanal',action='store_true',help="Grafica casos por semana en lugar día")
   parsed = parser.parse_args()
  
   with pd.ExcelFile(parsed.catalogo) as xls:
@@ -67,21 +68,29 @@ if __name__=='__main__':
   else:
     entidad = "Estados Unidos Méxicanos"
         
-
   if parsed.desplazamiento:
     last_date = pd.Timestamp.now() - pd.Timedelta(days=parsed.desplazamiento)
     covid_df = covid_df[covid_df[date_tag] < last_date]
 
+  if parsed.semanal:
+    grouping = pd.Grouper(key=date_tag,freq="1W")
+    dead_grouping = pd.Grouper(key="FECHA_DEF",freq="1W")
+    bar_w = 1.5
+  else:
+    grouping = date_tag
+    dead_grouping = "FECHA_DEF"
+    bar_w = 0.5
 
   result_tag = 'CLASIFICACION_FINAL'
   all_positives = covid_df[result_tag].isin([1,2,3])
+  all_suspects = covid_df[result_tag].isin([4,5,6])
   print("Resumen para {}".format(entidad.capitalize()))
   print("Eventos registrados || {}".format(covid_df['ID_REGISTRO'].count()))
   positive_df = covid_df[all_positives]
   print("Casos positivos     || {}".format(positive_df['ID_REGISTRO'].count()))
   negative_df = covid_df[covid_df[result_tag] == 7]
   print("Casos negativos     || {}".format(negative_df['ID_REGISTRO'].count()))
-  pending_df = covid_df[covid_df[result_tag] == 6]
+  pending_df = covid_df[all_suspects]
   print("Casos sospechosos   || {}".format(pending_df['ID_REGISTRO'].count()))
   #active_df = covid_df[covid_df['RESULTADO'] != 3]
 
@@ -90,8 +99,8 @@ if __name__=='__main__':
 
   #Did not used all of the categories but left code for reference
   #timeseries_full = covid_df.groupby(date_tag) 
-  timeseries_positive  = positive_df.groupby(date_tag)
-  timeseries_pending  = pending_df.groupby(date_tag)
+  timeseries_positive  = positive_df.groupby(grouping)
+  timeseries_pending  = pending_df.groupby(grouping)
   #timeseries_negative  = negative_df.groupby('FECHA_SINTOMAS')
 
   print("------------------------------")
@@ -101,17 +110,18 @@ if __name__=='__main__':
     death_df = death_df[death_df['FECHA_DEF'] < last_date]
 
   all_positive_deaths = death_df[result_tag].isin([1,2,3])
+  all_suspect_deaths = death_df[result_tag].isin([4,5,6])
   print("Defunciones registradas ||  {}".format(death_df['ID_REGISTRO'].count()) )
   positive_death_df = death_df[all_positive_deaths]
   print("Defunciones positivas   ||  {}".format(positive_death_df['ID_REGISTRO'].count()) ) 
-  suspect_death_df = death_df[death_df[result_tag] == 6]
+  suspect_death_df = death_df[all_suspect_deaths]
   print("Defunciones sospechosas || {}".format(suspect_death_df['ID_REGISTRO'].count()) )
 
   print("Primer defuncion en:    || {}".format(min(death_df[date_tag]) ))
   print("Ultima defuncion en:    || {}".format(max(death_df[date_tag]) ))
   #death_series_full = death_df.groupby('FECHA_DEF')
-  death_series_positive = positive_death_df.groupby('FECHA_DEF')
-  death_series_suspect = suspect_death_df.groupby('FECHA_DEF')
+  death_series_positive = positive_death_df.groupby(dead_grouping)
+  death_series_suspect = suspect_death_df.groupby(dead_grouping)
   
   coalesced_deaths = pd.DataFrame(columns=["Positivos", "Sospechosos"])  
   coalesced_deaths['Positivos'] = death_series_positive['ID_REGISTRO'].count()
@@ -128,6 +138,6 @@ if __name__=='__main__':
 
   #Plotting
   plt.style.use('ggplot')
-  graph_df(coalesced_df,cumulative=parsed.acumulados, title="Casos {}".format(entidad))
-  graph_df(coalesced_deaths,cumulative=parsed.acumulados, title="Defunciones {}".format(entidad))
+  graph_df(coalesced_df,cumulative=parsed.acumulados, title="Casos {}".format(entidad),bar_width=bar_w)
+  graph_df(coalesced_deaths,cumulative=parsed.acumulados, title="Defunciones {}".format(entidad),bar_width=bar_w)
   plt.show()
