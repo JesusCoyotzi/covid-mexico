@@ -72,7 +72,6 @@ if __name__=='__main__':
       
   covid_df = pd.read_csv(parsed.archivo,encoding='latin-1')
   
-  input("Stopper")
   print("Lectura completa")
   if parsed.ingreso:
     date_tag="FECHA_INGRESO"  
