@@ -26,7 +26,22 @@ def graph_df(df,cumulative=False, title="Cases", bar_width=0.8):
   ax.xaxis.set_tick_params(rotation=45)
   ax.legend()
   
+ 
+def parse_df(covid_df, grouping):
+  """Parse datafram into format to count cases per day"""
+  #Separate into positive cases, both laboratory confirmed and ruled
+  result_tag='CLASIFICACION_FINAL'
+  all_positives = covid_df[result_tag].isin([1,2,3]) 
+  all_suspects = covid_df[result_tag].isin([4,5,6])
   
+  coalesced_df = pd.DataFrame(columns=["Positivos", "Sospechosos"])
+  coalesced_df['Positivos'] = covid_df[all_positives].groupby(grouping)['ID_REGISTRO'].count()
+  coalesced_df['Sospechosos'] = covid_df[all_suspects].groupby(grouping)['ID_REGISTRO'].count()
+ 
+  return coalesced_df 
+
+  
+ 
 if __name__=='__main__':
 
   parser = argparse.ArgumentParser(description="Datos oficiales Covid-18")
