@@ -33,11 +33,19 @@ def parse_df(covid_df, grouping):
   result_tag='CLASIFICACION_FINAL'
   all_positives = covid_df[result_tag].isin([1,2,3]) 
   all_suspects = covid_df[result_tag].isin([4,5,6])
+  all_negatives = covid_df[result_tag] == 7
   
-  coalesced_df = pd.DataFrame(columns=["Positivos", "Sospechosos"])
+  print("Eventos registrados || {}".format(covid_df['ID_REGISTRO'].count()))
+  print("Positivos     || {}".format(all_positives.sum()))
+  print("Negativos     || {}".format(all_negatives.sum()))
+  print("Sospechosos   || {}".format(all_suspects.sum()))
+  
+  coalesced_df = pd.DataFrame(columns=["Positivos", "Sospechosos", "Negativos"])
   coalesced_df['Positivos'] = covid_df[all_positives].groupby(grouping)['ID_REGISTRO'].count()
   coalesced_df['Sospechosos'] = covid_df[all_suspects].groupby(grouping)['ID_REGISTRO'].count()
- 
+  #coalesced_df['Negativos'] = covid_df[all_negatives].groupby(grouping)['ID_REGISTRO'].count()
+  coalesced_df.fillna(0,inplace=True)
+
   return coalesced_df 
 
   
@@ -64,6 +72,8 @@ if __name__=='__main__':
       
   covid_df = pd.read_csv(parsed.archivo,encoding='latin-1')
   
+  input("Stopper")
+  print("Lectura completa")
   if parsed.ingreso:
     date_tag="FECHA_INGRESO"  
   else:
@@ -96,63 +106,29 @@ if __name__=='__main__':
     dead_grouping = "FECHA_DEF"
     bar_w = 0.5
 
-  result_tag = 'CLASIFICACION_FINAL'
-  all_positives = covid_df[result_tag].isin([1,2,3])
-  all_suspects = covid_df[result_tag].isin([4,5,6])
+
   print("Resumen para {}".format(entidad.capitalize()))
-  print("Eventos registrados || {}".format(covid_df['ID_REGISTRO'].count()))
-  positive_df = covid_df[all_positives]
-  print("Casos positivos     || {}".format(positive_df['ID_REGISTRO'].count()))
-  negative_df = covid_df[covid_df[result_tag] == 7]
-  print("Casos negativos     || {}".format(negative_df['ID_REGISTRO'].count()))
-  pending_df = covid_df[all_suspects]
-  print("Casos sospechosos   || {}".format(pending_df['ID_REGISTRO'].count()))
-  #active_df = covid_df[covid_df['RESULTADO'] != 3]
+  print("Casos de COVID-19:")
+  coalesced_cases = parse_df(covid_df,grouping)
+  print("Primer caso en:     || {}".format(min(coalesced_cases.index) ))
+  print("Ultimo caso en:     || {}".format(max(coalesced_cases.index) ))
 
-  print("Primer caso en:     || {}".format(min(positive_df[date_tag]) ))
-  print("Ultimo caso en:     || {}".format(max(positive_df[date_tag]) ))
-
-  #Did not used all of the categories but left code for reference
-  #timeseries_full = covid_df.groupby(date_tag) 
-  timeseries_positive  = positive_df.groupby(grouping)
-  timeseries_pending  = pending_df.groupby(grouping)
-  #timeseries_negative  = negative_df.groupby('FECHA_SINTOMAS')
-
+  #Did not used all of the categories but left code for referenc
   print("------------------------------")
   death_df = covid_df.loc[covid_df['FECHA_DEF'] != "9999-99-99"].copy()
   death_df['FECHA_DEF'] = pd.to_datetime(death_df['FECHA_DEF'],format="%Y-%m-%d")
   if parsed.desplazamiento:
     death_df = death_df[death_df['FECHA_DEF'] < last_date]
 
-  all_positive_deaths = death_df[result_tag].isin([1,2,3])
-  all_suspect_deaths = death_df[result_tag].isin([4,5,6])
-  print("Defunciones registradas ||  {}".format(death_df['ID_REGISTRO'].count()) )
-  positive_death_df = death_df[all_positive_deaths]
-  print("Defunciones positivas   ||  {}".format(positive_death_df['ID_REGISTRO'].count()) ) 
-  suspect_death_df = death_df[all_suspect_deaths]
-  print("Defunciones sospechosas || {}".format(suspect_death_df['ID_REGISTRO'].count()) )
+  print("Defunciones registradas")
+  coalesced_deaths = parse_df(death_df,dead_grouping)
 
-  print("Primer defuncion en:    || {}".format(min(death_df[date_tag]) ))
-  print("Ultima defuncion en:    || {}".format(max(death_df[date_tag]) ))
+  print("Primer defuncion en:    || {}".format(min(coalesced_deaths.index) ))
+  print("Ultima defuncion en:    || {}".format(max(coalesced_deaths.index) ))
   #death_series_full = death_df.groupby('FECHA_DEF')
-  death_series_positive = positive_death_df.groupby(dead_grouping)
-  death_series_suspect = suspect_death_df.groupby(dead_grouping)
-  
-  coalesced_deaths = pd.DataFrame(columns=["Positivos", "Sospechosos"])  
-  coalesced_deaths['Positivos'] = death_series_positive['ID_REGISTRO'].count()
-  coalesced_deaths['Sospechosos'] = death_series_suspect['ID_REGISTRO'].count()
-   
-  coalesced_df = pd.DataFrame(columns=["Positivos", "Sospechosos"])
-  #coalesced_df['Total'] = timeseries_full['ID_REGISTRO'].count().cumsum()
-  #coalesced_df['Negativos'] = timeseries_negative['ID_REGISTRO'].count().cumsum()
-  coalesced_df['Sospechosos'] = timeseries_pending['ID_REGISTRO'].count()
-  coalesced_df['Positivos'] = timeseries_positive['ID_REGISTRO'].count()
-  #Fill days with no data or cases
-  coalesced_deaths.fillna(0,inplace=True)
-  coalesced_df.fillna(0,inplace=True)
-
+ 
   #Plotting
   plt.style.use('ggplot')
-  graph_df(coalesced_df,cumulative=parsed.acumulados, title="Casos {}".format(entidad),bar_width=bar_w)
+  graph_df(coalesced_cases,cumulative=parsed.acumulados, title="Casos {}".format(entidad),bar_width=bar_w)
   graph_df(coalesced_deaths,cumulative=parsed.acumulados, title="Defunciones {}".format(entidad),bar_width=bar_w)
   plt.show()
