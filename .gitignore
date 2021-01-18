@@ -1,5 +1,6 @@
 *.zip
 csv_data/*
+graphs/
 *.pyc
 *.swp
 *lock*

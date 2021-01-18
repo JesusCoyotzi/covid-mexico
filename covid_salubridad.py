@@ -25,6 +25,7 @@ def graph_df(df,cumulative=False, title="Cases", bar_width=0.8):
   ax.xaxis.set_major_formatter(date_form)
   ax.xaxis.set_tick_params(rotation=45)
   ax.legend()
+  return fig
   
  
 def parse_df(covid_df, grouping):
@@ -46,6 +47,7 @@ def parse_df(covid_df, grouping):
   #coalesced_df['Negativos'] = covid_df[all_negatives].groupby(grouping)['ID_REGISTRO'].count()
   coalesced_df.fillna(0,inplace=True)
 
+  print(coalesced_df.info())
   return coalesced_df 
 
   
@@ -60,6 +62,7 @@ if __name__=='__main__':
   parser.add_argument('--acumulados',action='store_true', help="Grafica casos acumulados en vez de incidencias")
   parser.add_argument('--ingreso',action='store_true', help="Usa fecha de ingreso en lugar de fecha de sintomas")
   parser.add_argument('--semanal',action='store_true',help="Grafica casos por semana en lugar día")
+  parser.add_argument('--guardar',action='store',default="",  metavar="ruta", dest="savefig", help='guarda la gráfica en lugar de mostrarla')
   parsed = parser.parse_args()
  
   with pd.ExcelFile(parsed.catalogo) as xls:
@@ -70,9 +73,12 @@ if __name__=='__main__':
   #print(municipio_df.head())
   #print(estado_df.head())
       
-  covid_df = pd.read_csv(parsed.archivo,encoding='latin-1')
+  used_cols = ["FECHA_INGRESO","FECHA_SINTOMAS","ENTIDAD_RES",
+               "FECHA_DEF","ID_REGISTRO","CLASIFICACION_FINAL"]
+  covid_df = pd.read_csv(parsed.archivo,encoding='latin-1',usecols=used_cols)
   
   print("Lectura completa")
+  print(covid_df.info())
   if parsed.ingreso:
     date_tag="FECHA_INGRESO"  
   else:
@@ -128,6 +134,12 @@ if __name__=='__main__':
  
   #Plotting
   plt.style.use('ggplot')
-  graph_df(coalesced_cases,cumulative=parsed.acumulados, title="Casos {}".format(entidad),bar_width=bar_w)
-  graph_df(coalesced_deaths,cumulative=parsed.acumulados, title="Defunciones {}".format(entidad),bar_width=bar_w)
-  plt.show()
+  cases_graph = graph_df(coalesced_cases,cumulative=parsed.acumulados, title="Casos {}".format(entidad),bar_width=bar_w)
+  deaths_graph = graph_df(coalesced_deaths,cumulative=parsed.acumulados, title="Defunciones {}".format(entidad),bar_width=bar_w)
+
+  if parsed.savefig:
+    print("Guardando como: {}-cases/deaths.png".format(parsed.savefig))
+    cases_graph.savefig(parsed.savefig+"cases.png")
+    deaths_graph.savefig(parsed.savefig+"deaths.png")
+  else:
+    plt.show()
