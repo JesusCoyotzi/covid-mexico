@@ -47,7 +47,7 @@ def parse_df(covid_df, grouping):
   #coalesced_df['Negativos'] = covid_df[all_negatives].groupby(grouping)['ID_REGISTRO'].count()
   coalesced_df.fillna(0,inplace=True)
 
-  print(coalesced_df.info())
+ # print(coalesced_df.info())
   return coalesced_df 
 
   
@@ -78,7 +78,7 @@ if __name__=='__main__':
   covid_df = pd.read_csv(parsed.archivo,encoding='latin-1',usecols=used_cols)
   
   print("Lectura completa")
-  print(covid_df.info())
+ # print(covid_df.iinfo())
   if parsed.ingreso:
     date_tag="FECHA_INGRESO"  
   else:
