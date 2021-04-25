@@ -11,6 +11,7 @@ Este proyecto depende solo de una version de python3 asi como matplotlib y panda
 - python 3(6.9)
 - matplotlib (2.1.1)
 - pandas (1.1.0)
+- xlrd (1.2.0)
 En mi caso esas son las versiones exactas que use pero deberia funcionar con cualquier version reciente de los anteriores.
 
 ## Uso
