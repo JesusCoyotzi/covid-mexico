@@ -21,7 +21,7 @@ def graph_df(df,cumulative=False, title="Cases", bar_width=0.8):
   date_form = DateFormatter('%d-%m-%Y')
   ax.set_title(title)
   ax.xaxis_date()
-  ax.xaxis.set_major_locator(mdates.WeekdayLocator())
+  ax.xaxis.set_major_locator(mdates.MonthLocator())
   ax.xaxis.set_major_formatter(date_form)
   ax.xaxis.set_tick_params(rotation=45)
   ax.legend()
